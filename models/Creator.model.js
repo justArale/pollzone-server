@@ -1,7 +1,7 @@
 const { Schema, model } = require("mongoose");
 
 // TODO: Please make sure you edit the User model to whatever makes sense in this case
-const userSchema = new Schema(
+const CreatorSchema = new Schema(
   {
     name: {
       type: String,
@@ -18,6 +18,10 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Password is required."],
     },
+    description: {
+      type: String,
+      required: [true, "Description is required."],
+    },
     image: {
       type: String,
       default: "",
@@ -26,8 +30,7 @@ const userSchema = new Schema(
       type: [String],
       default: [""],
     },
-    votes: [{ type: Schema.Types.ObjectId, ref: "Vote" }],
-    favoritCreators: [{ type: Schema.Types.ObjectId, ref: "Creator" }],
+    projects: [{ type: Schema.Types.ObjectId, ref: "Project" }],
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`
@@ -35,6 +38,6 @@ const userSchema = new Schema(
   }
 );
 
-const User = model("User", userSchema);
+const Creator = model("Creator", CreatorSchema);
 
-module.exports = User;
+module.exports = Creator;
