@@ -26,6 +26,10 @@ const userSchema = new Schema(
       type: [String],
       default: [""],
     },
+    role: {
+      type: String,
+      enum: ["Creator", "User"],
+    },
     votes: [{ type: Schema.Types.ObjectId, ref: "Vote" }],
     favoritCreators: [{ type: Schema.Types.ObjectId, ref: "Creator" }],
   },

@@ -16,23 +16,23 @@ const app = express();
 require("./config")(app);
 
 // 👇 Start handling routes here
-const indexRoutes = require("./routes/index.routes");
-app.use("/api", indexRoutes);
+// const indexRoutes = require("./routes/index.routes");
+// app.use("/api", indexRoutes);
 
-const authRoutes = require("./routes/auth.routes");
-app.use("/auth", authRoutes);
+// const authRoutes = require("./routes/auth.routes");
+// app.use("/auth", authRoutes);
 
 const creatorRoutes = require("./routes/creator.routes");
-app.use("/api", isAuthenticated, creatorRoutes);
+app.use("/api", creatorRoutes);
 
-const userRoutes = require("./routes/user.routes");
-app.use("/api", isAuthenticated, userRoutes);
+// const userRoutes = require("./routes/user.routes");
+// app.use("/api", isAuthenticated, userRoutes);
 
-const voteRoutes = require("./routes/vote.routes");
-app.use("/api", voteRoutes);
+// const voteRoutes = require("./routes/vote.routes");
+// app.use("/api", voteRoutes);
 
-const projectRoutes = require("./routes/project.routes");
-app.use("/api", projectRoutes);
+// const projectRoutes = require("./routes/project.routes");
+// app.use("/api", projectRoutes);
 
 // ❗ To handle errors. Routes that don't exist or errors that you handle in specific routes
 require("./error-handling")(app);

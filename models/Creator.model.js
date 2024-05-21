@@ -18,10 +18,7 @@ const CreatorSchema = new Schema(
       type: String,
       required: [true, "Password is required."],
     },
-    description: {
-      type: String,
-      required: [true, "Description is required."],
-    },
+    description: String,
     image: {
       type: String,
       default: "",
@@ -29,6 +26,10 @@ const CreatorSchema = new Schema(
     socialMedia: {
       type: [String],
       default: [""],
+    },
+    role: {
+      type: String,
+      enum: ["Creator", "User"],
     },
     projects: [{ type: Schema.Types.ObjectId, ref: "Project" }],
   },
