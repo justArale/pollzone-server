@@ -63,8 +63,8 @@ router.post("/signup", (req, res, next) => {
 router.post("/login", (req, res, next) => {
   const { email, password } = req.body;
 
-  if (email === "" || password === "") {
-    res.status(400).json({ message: "Provide email and password." });
+  if (!email || !password) {
+    res.status(401).json({ message: "All inputs are required!" });
     return;
   }
 
@@ -92,14 +92,17 @@ router.post("/login", (req, res, next) => {
     .then((results) => {
       const result = results.find((res) => res !== null);
       if (result) {
-        res.status(200).json(result);
+        return res.status(200).json(result);
       } else {
-        res
+        return res
           .status(401)
           .json({ message: "Unable to authenticate the fan/creator" });
       }
     })
-    .catch((err) => res.status(500).json({ message: "Internal Server Error" }));
+    .catch((err) => {
+      console.error("Login error: ", err);
+      return res.status(500).json({ message: "Internal Server Error" });
+    });
 });
 
 // GET /auth/verify - Used to verify JWT stored on the client

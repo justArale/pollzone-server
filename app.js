@@ -24,8 +24,8 @@ app.use("/auth", authRoutes);
 const creatorRoutes = require("./routes/creator.routes");
 app.use("/api", creatorRoutes);
 
-// const fanRoutes = require("./routes/fan.routes");
-// app.use("/api", isAuthenticated, fanRoutes);
+const fanRoutes = require("./routes/fan.routes");
+app.use("/api", fanRoutes);
 
 // const optionRoutes = require("./routes/option.routes");
 // app.use("/api", optionRoutes);

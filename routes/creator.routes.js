@@ -19,13 +19,13 @@ router.get("/creators", (req, res) => {
 
 // GET /api/creators/:id - Retrieves a specific creator by id
 router.get("/creators/:id", (req, res) => {
-  const creatorID = req.params.creatorId;
+  const creatorId = req.params.id;
 
-  if (!mongoose.Types.ObjectId.isValid(creatorID)) {
+  if (!mongoose.Types.ObjectId.isValid(creatorId)) {
     res.status(400).json({ message: "Specified id is not valid" });
     return;
   }
-  Creator.findById(creatorID)
+  Creator.findById(creatorId)
     .then((creator) => {
       console.log("Retrieved creator ->", creator);
       res.status(200).json(creator);
@@ -36,8 +36,7 @@ router.get("/creators/:id", (req, res) => {
     });
 });
 
-// PUT /api/creators/:creatorId - Updates a specific creator by id
-
+// PUT /api/creators/:id - Updates a specific creator by id
 router.put("/creators/:id", isAuthenticated, (req, res) => {
   const creatorId = req.params.creatorId;
 
@@ -58,7 +57,7 @@ router.put("/creators/:id", isAuthenticated, (req, res) => {
 });
 
 // DELETE /api/creators/:creatorId - Deletes a specific creator by id
-router.delete("/creators/:Id", isAuthenticated, (req, res) => {
+router.delete("/creators/:id", isAuthenticated, (req, res) => {
   Creator.findByIdAndDelete(req.params.creatorId)
     .then((result) => {
       console.log("Creator deleted!");
