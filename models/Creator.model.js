@@ -1,6 +1,5 @@
 const { Schema, model } = require("mongoose");
 
-// TODO: Please make sure you edit the User model to whatever makes sense in this case
 const CreatorSchema = new Schema(
   {
     name: {
@@ -29,9 +28,10 @@ const CreatorSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["Creator", "User"],
+      enum: ["creators", "fans"],
     },
     projects: [{ type: Schema.Types.ObjectId, ref: "Project" }],
+    fans: [{ type: Schema.Types.ObjectId, ref: "Fan" }],
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`

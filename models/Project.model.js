@@ -1,6 +1,5 @@
 const { Schema, model } = require("mongoose");
 
-// TODO: Please make sure you edit the User model to whatever makes sense in this case
 const ProjectSchema = new Schema(
   {
     title: {
@@ -15,7 +14,7 @@ const ProjectSchema = new Schema(
       type: String,
       default: "",
     },
-    votes: [{ type: Schema.Types.ObjectId, ref: "Vote" }],
+    options: [{ type: Schema.Types.ObjectId, ref: "Options" }],
     creator: [{ type: Schema.Types.ObjectId, ref: "Creator" }],
     inProgress: { type: Boolean, default: true },
     timeCount: {
