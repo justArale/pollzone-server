@@ -27,8 +27,8 @@ app.use("/api", creatorRoutes);
 const fanRoutes = require("./routes/fan.routes");
 app.use("/api", fanRoutes);
 
-// const optionRoutes = require("./routes/option.routes");
-// app.use("/api", optionRoutes);
+const optionRoutes = require("./routes/option.routes");
+app.use("/api", optionRoutes);
 
 const projectRoutes = require("./routes/project.routes");
 app.use("/api", projectRoutes);

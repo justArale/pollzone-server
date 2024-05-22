@@ -38,7 +38,7 @@ router.get("/creators/:id", (req, res) => {
 
 // PUT /api/creators/:id - Updates a specific creator by id
 router.put("/creators/:id", isAuthenticated, (req, res) => {
-  const creatorId = req.params.creatorId;
+  const creatorId = req.params.id;
 
   if (!mongoose.Types.ObjectId.isValid(creatorId)) {
     res.status(400).json({ message: "Specified id is not valid" });
@@ -56,9 +56,9 @@ router.put("/creators/:id", isAuthenticated, (req, res) => {
     });
 });
 
-// DELETE /api/creators/:creatorId - Deletes a specific creator by id
+// DELETE /api/creators/:id - Deletes a specific creator by id
 router.delete("/creators/:id", isAuthenticated, (req, res) => {
-  Creator.findByIdAndDelete(req.params.creatorId)
+  Creator.findByIdAndDelete(req.params.id)
     .then((result) => {
       console.log("Creator deleted!");
       res.status(204).send();
