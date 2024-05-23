@@ -64,7 +64,7 @@ router.get(
   "/creators/:creatorId/projects/:projectId/options/:optionId",
   isAuthenticated,
   (req, res) => {
-    const optionId = req.params.optionId; // Verwende optionId statt optionsId
+    const optionId = req.params.optionId;
 
     Option.findById(optionId)
       .then((option) => {
@@ -127,14 +127,14 @@ async function updateOptionForCreator(
   projectId,
   optionsId
 ) {
-  // Überprüfe, ob der angemeldete Creator der Besitzer des Projekts ist
+  // Check if the logged-in creator is the owner of the project
   if (req.payload._id !== creatorId) {
     return res
       .status(403)
       .json({ message: "You are not authorized to perform this action" });
   }
 
-  // Überprüfe, ob die Option zu einem Projekt des angemeldeten Creators gehört
+  // Check if the option belongs to a project of the logged-in creator
   const project = await Project.findOne({
     _id: projectId,
     creator: creatorId,
