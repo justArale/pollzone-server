@@ -54,7 +54,7 @@ router.post(
   }
 );
 
-// GET /creators/projects - Retrieves all projects for a specific creator
+// GET /projects - Retrieves all projects of all creator
 router.get("/projects", (req, res) => {
   Project.find({})
     .then((projects) => {
