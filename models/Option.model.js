@@ -13,7 +13,11 @@ const OptionsSchema = new Schema({
     type: String,
     default: "",
   },
-  project: [{ type: Schema.Types.ObjectId, ref: "Project" }],
+  projectId: {
+    type: Schema.Types.ObjectId,
+    ref: "Project",
+    required: [true, "Project ID is required."],
+  },
   counter: {
     type: Number,
     default: 0,

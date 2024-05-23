@@ -14,8 +14,12 @@ const ProjectSchema = new Schema(
       type: String,
       default: "",
     },
-    options: [{ type: Schema.Types.ObjectId, ref: "Options" }],
-    creator: [{ type: Schema.Types.ObjectId, ref: "Creator" }],
+    options: [{ type: Schema.Types.ObjectId, ref: "Option" }],
+    creator: {
+      type: Schema.Types.ObjectId,
+      ref: "Creator",
+      required: [true, "Project ID is required."],
+    },
     inProgress: { type: Boolean, default: true },
     timeCount: {
       type: Number,

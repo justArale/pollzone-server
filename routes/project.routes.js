@@ -3,32 +3,62 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 
 const Project = require("../models/Project.model");
+const Creator = require("../models/Creator.model");
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const { isCreator } = require("../middleware/creator.middleware");
 
-router.post("/projects/", isAuthenticated, isCreator, (req, res) => {
-  const projectId = req.params.projectId;
+// POST /creators/:creatorId/projects - Creates a new project for a specific creator
+router.post(
+  "/creators/:creatorId/projects",
+  isAuthenticated,
+  isCreator,
+  async (req, res) => {
+    const creatorId = req.params.creatorId;
 
-  if (!mongoose.Types.ObjectId.isValid(projectId)) {
-    res.status(400).json({ message: "Specified id is not valid" });
-    return;
+    // Check if the authenticated user is the same as the creatorId
+    if (req.payload._id !== creatorId) {
+      return res.status(403).json({
+        error: "You are not authorized to create a project for this creator",
+      });
+    }
+
+    try {
+      const { title, description, image, options, inProgress, timeCount } =
+        req.body;
+
+      // Create project
+      const newProject = await Project.create({
+        title,
+        description,
+        image,
+        options,
+        creator: creatorId,
+        inProgress,
+        timeCount,
+      });
+
+      console.log("Created new project ->", newProject);
+
+      // Update the creator to add the new project to their projects array
+      await Creator.findByIdAndUpdate(
+        creatorId,
+        { $push: { projects: newProject._id } },
+        { new: true }
+      );
+
+      res.status(201).json(newProject);
+    } catch (error) {
+      console.error("Error while creating the project ->", error);
+      res.status(500).json({ error: "Failed to create the project" });
+    }
   }
+);
 
-  Project.findByIdAndUpdate(projectId, req.body, { new: true })
-    .then((updatedProject) => {
-      console.log("Updated project ->", updatedProject);
-      res.status(200).json(updatedProject);
-    })
-    .catch((error) => {
-      console.error("Error while updating the project ->", error);
-      res.status(500).json({ error: "Failed to update the project" });
-    });
-});
-
+// GET /creators/projects - Retrieves all projects for a specific creator
 router.get("/projects", (req, res) => {
   Project.find({})
     .then((projects) => {
-      console.log("Retrieved projects ->", projects);
+      console.log(`Retrieved projects for creator ->`, projects);
       res.json(projects);
     })
     .catch((error) => {
@@ -37,12 +67,36 @@ router.get("/projects", (req, res) => {
     });
 });
 
-router.get("/projects/:id", (req, res) => {
-  const projectId = req.params.id;
+// GET /creators/:creatorId/projects - Retrieves all projects for a specific creator
+router.get("/creators/:creatorId/projects", (req, res) => {
+  const creatorId = req.params.creatorId;
 
-  Project.findById(projectId)
+  Project.find({ creator: creatorId })
+    .then((projects) => {
+      console.log(`Retrieved projects for creator ${creatorId} ->`, projects);
+      res.json(projects);
+    })
+    .catch((error) => {
+      console.error("Error while retrieving projects ->", error);
+      res.status(500).json({ error: "Failed to retrieve projects" });
+    });
+});
+
+// GET /creators/:creatorId/projects/:projectId - Retrieves a specific project for a specific creator
+router.get("/creators/:creatorId/projects/:projectId", (req, res) => {
+  const { creatorId, projectId } = req.params;
+
+  Project.findOne({ _id: projectId, creator: creatorId })
     .then((project) => {
-      console.log("Retrieved project ->", project);
+      if (!project) {
+        return res.status(404).json({
+          message: "Project not found or does not belong to this creator",
+        });
+      }
+      console.log(
+        `Retrieved project ${projectId} for creator ${creatorId} ->`,
+        project
+      );
       res.status(200).json(project);
     })
     .catch((error) => {
@@ -51,42 +105,102 @@ router.get("/projects/:id", (req, res) => {
     });
 });
 
-// PUT /api/projects/:id - Updates a specific project by id
-router.put("/projects/:id"),
+// PUT /creators/:creatorId/projects/:projectId - Updates a specific project by id
+router.put(
+  "/creators/:creatorId/projects/:projectId",
   isAuthenticated,
   isCreator,
-  (req, res) => {
-    const projectId = req.params.id;
+  async (req, res) => {
+    const { creatorId, projectId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      res.status(400).json({ message: "Specified id is not valid" });
-      return;
+    // Check if the authenticated user is the same as the creatorId
+    if (req.payload._id !== creatorId) {
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to update this project" });
     }
 
-    Project.findByIdAndUpdate(projectId, req.body, { new: true })
-      .then((updatedProject) => {
-        console.log("Updated project ->", updatedProject);
-        res.status(200).json(updatedProject);
-      })
-      .catch((error) => {
-        console.error("Error while updating the project ->", error);
-        res.status(500).json({ error: "Failed to update the project" });
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res
+        .status(400)
+        .json({ message: "Specified project id is not valid" });
+    }
+
+    try {
+      // Check if the project belongs to the creator
+      const project = await Project.findOne({
+        _id: projectId,
+        creator: creatorId,
       });
-  };
+      if (!project) {
+        return res.status(404).json({
+          message: "Project not found or does not belong to the creator",
+        });
+      }
 
-// DELETE /api/projects/:id - Deletes a specific project by id
-router.delete("/projects/:id", isAuthenticated, isCreator, (req, res) => {
-  const projectId = req.params.id;
+      // Update the project
+      const updatedProject = await Project.findByIdAndUpdate(
+        projectId,
+        req.body,
+        { new: true }
+      );
+      console.log("Updated project ->", updatedProject);
+      res.status(200).json(updatedProject);
+    } catch (error) {
+      console.error("Error while updating the project ->", error);
+      res.status(500).json({ error: "Failed to update the project" });
+    }
+  }
+);
 
-  Project.findByIdAndDelete(projectId)
-    .then((result) => {
+// DELETE /api/creators/:creatorId/projects/:projectId
+router.delete(
+  "/creators/:creatorId/projects/:projectId",
+  isAuthenticated,
+  isCreator,
+  async (req, res) => {
+    const { creatorId, projectId } = req.params;
+
+    // Check if the authenticated user is the same as the creatorId
+    if (req.payload._id !== creatorId) {
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to delete this project" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res
+        .status(400)
+        .json({ message: "Specified project id is not valid" });
+    }
+
+    try {
+      // Check if the project exists and belongs to the current Creator
+      const project = await Project.findOne({
+        _id: projectId,
+        creator: creatorId,
+      });
+      if (!project) {
+        return res
+          .status(404)
+          .json({ message: "Project not found or unauthorized" });
+      }
+
+      // Delete project
+      await Project.findByIdAndDelete(projectId);
+
+      // Remove the reference from the Creator document
+      await Creator.findByIdAndUpdate(creatorId, {
+        $pull: { projects: projectId },
+      });
+
       console.log("Project deleted!");
       res.status(204).send();
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error("Error while deleting the project ->", error);
       res.status(500).json({ error: "Deleting project failed" });
-    });
-});
+    }
+  }
+);
 
 module.exports = router;
