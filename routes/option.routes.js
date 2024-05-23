@@ -81,29 +81,73 @@ router.get(
   }
 );
 
-// PUT /api/creators/:creatorId/projects/:projectId/options/:optionsId - Updates a specific project by id
+// PUT /creators/:creatorId/projects/:projectId/options/:optionsId  - Updates a specific option by id (for fans and creators)
 router.put(
   "/creators/:creatorId/projects/:projectId/options/:optionsId",
   isAuthenticated,
-  (req, res) => {
-    const optionsId = req.params.optionsId; // Korrektur: optionsId statt id
+  async (req, res) => {
+    const { creatorId, projectId, optionsId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(optionsId)) {
-      res.status(400).json({ message: "Specified id is not valid" });
-      return;
+    // Check if the user is a fan or creator
+    if (req.payload.role === "fans") {
+      // If the user is a fan, call the update function for fans
+      updateOptionForFan(req, res, optionsId);
+    } else if (req.payload.role === "creators") {
+      // If the user is a creator, call the update function for creators
+      updateOptionForCreator(req, res, creatorId, projectId, optionsId);
+    } else {
+      res.status(403).json({ message: "Unauthorized user role" });
     }
-
-    Option.findByIdAndUpdate(optionsId, req.body, { new: true })
-      .then((updatedOption) => {
-        console.log("Updated option ->", updatedOption);
-        res.status(200).json(updatedOption);
-      })
-      .catch((error) => {
-        console.error("Error while updating the option ->", error);
-        res.status(500).json({ error: "Failed to update the option" });
-      });
   }
 );
+
+// Function to update option for fans
+async function updateOptionForFan(req, res, optionsId) {
+  try {
+    const updatedOption = await Option.findByIdAndUpdate(optionsId, req.body, {
+      new: true,
+    });
+    if (!updatedOption) {
+      return res.status(404).json({ message: "Option not found" });
+    }
+
+    console.log("Updated option ->", updatedOption);
+    res.status(200).json(updatedOption);
+  } catch (error) {
+    console.error("Error while updating the option ->", error);
+    res.status(500).json({ error: "Failed to update the option" });
+  }
+}
+
+// Function to update option for creators
+async function updateOptionForCreator(
+  req,
+  res,
+  creatorId,
+  projectId,
+  optionsId
+) {
+  // Überprüfe, ob der angemeldete Creator der Besitzer des Projekts ist
+  if (req.payload._id !== creatorId) {
+    return res
+      .status(403)
+      .json({ message: "You are not authorized to perform this action" });
+  }
+
+  // Überprüfe, ob die Option zu einem Projekt des angemeldeten Creators gehört
+  const project = await Project.findOne({
+    _id: projectId,
+    creator: creatorId,
+  });
+  if (!project) {
+    return res
+      .status(404)
+      .json({ message: "Project not found or unauthorized" });
+  }
+
+  // Update the option
+  updateOptionForFan(req, res, optionsId);
+}
 
 // DELETE /api/creators/:creatorId/projects/:projectId/options/:optionsId - Deletes a specific project by id
 router.delete(
