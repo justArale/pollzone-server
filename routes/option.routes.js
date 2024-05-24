@@ -15,8 +15,8 @@ router.post(
   "/creators/:creatorId/projects/:projectId/options",
   isAuthenticated,
   isCreator,
-  (req, res) => {
-    const { title, description } = req.body;
+  async (req, res) => {
+    const { title, description, image } = req.body;
     const { projectId } = req.params;
 
     // Validate project ID
@@ -25,24 +25,27 @@ router.post(
       return;
     }
 
-    Option.create({ title, description, projectId })
-      .then((newOption) => {
-        console.log("Created new option ->", newOption);
-
-        // Update the project to add the new option to its options array
-        return Project.findByIdAndUpdate(
-          projectId,
-          { $push: { options: newOption._id } },
-          { new: true }
-        ).then(() => newOption); // return the new option after updating the project
-      })
-      .then((newOption) => {
-        res.status(201).json(newOption);
-      })
-      .catch((error) => {
-        console.error("Error while creating the option ->", error);
-        res.status(500).json({ error: "Failed to create the option" });
+    try {
+      const newOption = await Option.create({
+        title,
+        description,
+        image,
+        projectId,
       });
+      console.log("Created new option ->", newOption);
+
+      // Update the project to add the new option to its options array
+      await Project.findByIdAndUpdate(
+        projectId,
+        { $push: { options: newOption._id } },
+        { new: true }
+      );
+
+      res.status(201).json(newOption);
+    } catch (error) {
+      console.error("Error while creating the option ->", error);
+      res.status(500).json({ error: "Failed to create the option" });
+    }
   }
 );
 

@@ -8,8 +8,8 @@ const router = express.Router();
 const { isAuthenticated } = require("../middleware/jwt.middleware.js");
 const saltRounds = 10;
 
-// POST /auth/signup  - Creates a new fan or creator in the database
-router.post("/signup", (req, res, next) => {
+// POST /auth/signup - Creates a new fan or creator in the database
+router.post("/signup", async (req, res, next) => {
   const { email, password, name, role } = req.body;
 
   if (email === "" || password === "" || name === "" || !role) {
@@ -34,29 +34,34 @@ router.post("/signup", (req, res, next) => {
     return;
   }
 
-  const Model = role === "creators" ? Creator : Fan;
+  try {
+    // Check if the email already exists in either Fan or Creator collections
+    const foundFan = await Fan.findOne({ email });
+    const foundCreator = await Creator.findOne({ email });
 
-  Model.findOne({ email })
-    .then((foundUser) => {
-      if (foundUser) {
-        res.status(400).json({ message: `${role} already exists.` });
-        return;
-      }
+    if (foundFan || foundCreator) {
+      res.status(400).json({ message: "User with this email already exists." });
+      return;
+    }
 
-      const salt = bcrypt.genSaltSync(saltRounds);
-      const hashedPassword = bcrypt.hashSync(password, salt);
+    const salt = bcrypt.genSaltSync(saltRounds);
+    const hashedPassword = bcrypt.hashSync(password, salt);
 
-      return Model.create({ email, password: hashedPassword, name, role });
-    })
-    .then((createdUser) => {
-      const { email, name, _id, role } = createdUser;
-      const user = { email, name, _id, role };
-      res.status(201).json({ user: user });
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).json({ message: "Internal Server Error" });
+    const Model = role === "creators" ? Creator : Fan;
+    const createdUser = await Model.create({
+      email,
+      password: hashedPassword,
+      name,
+      role,
     });
+
+    const { _id } = createdUser;
+    const user = { email, name, _id, role };
+    res.status(201).json({ user: user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 // POST /auth/login - Verifies email and password and returns a JWT for Fan or Creator
