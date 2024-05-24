@@ -1,32 +1,30 @@
-// routes/auth.routes.js
-
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User.model");
+const Fan = require("../models/Fan.model.js");
+const Creator = require("../models/Creator.model");
 
 const router = express.Router();
 const { isAuthenticated } = require("../middleware/jwt.middleware.js");
 const saltRounds = 10;
 
-// POST /auth/signup  - Creates a new user in the database
-router.post("/signup", (req, res, next) => {
-  const { email, password, name } = req.body;
+// POST /auth/signup - Creates a new fan or creator in the database
+router.post("/signup", async (req, res, next) => {
+  const { email, password, name, role } = req.body;
 
-  // Check if the email or password or name is provided as an empty string
-  if (email === "" || password === "" || name === "") {
-    res.status(400).json({ message: "Provide email, password and name" });
+  if (email === "" || password === "" || name === "" || !role) {
+    res
+      .status(400)
+      .json({ message: "Provide email, password, name, and role" });
     return;
   }
 
-  // Use regex to validate the email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   if (!emailRegex.test(email)) {
     res.status(400).json({ message: "Provide a valid email address." });
     return;
   }
 
-  // Use regex to validate the password format
   const passwordRegex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}/;
   if (!passwordRegex.test(password)) {
     res.status(400).json({
@@ -36,97 +34,85 @@ router.post("/signup", (req, res, next) => {
     return;
   }
 
-  // Check the users collection if a user with the same email already exists
-  User.findOne({ email })
-    .then((foundUser) => {
-      // If the user with the same email already exists, send an error response
-      if (foundUser) {
-        res.status(400).json({ message: "User already exists." });
-        return;
-      }
+  try {
+    // Check if the email already exists in either Fan or Creator collections
+    const foundFan = await Fan.findOne({ email });
+    const foundCreator = await Creator.findOne({ email });
 
-      // If the email is unique, proceed to hash the password
-      const salt = bcrypt.genSaltSync(saltRounds);
-      const hashedPassword = bcrypt.hashSync(password, salt);
+    if (foundFan || foundCreator) {
+      res.status(400).json({ message: "User with this email already exists." });
+      return;
+    }
 
-      // Create a new user in the database
-      // We return a pending promise, which allows us to chain another `then`
-      return User.create({ email, password: hashedPassword, name });
-    })
-    .then((createdUser) => {
-      // Deconstruct the newly created user object to omit the password
-      // We should never expose passwords publicly
-      const { email, name, _id } = createdUser;
+    const salt = bcrypt.genSaltSync(saltRounds);
+    const hashedPassword = bcrypt.hashSync(password, salt);
 
-      // Create a new object that doesn't expose the password
-      const user = { email, name, _id };
-
-      // Send a json response containing the user object
-      res.status(201).json({ user: user });
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).json({ message: "Internal Server Error" });
+    const Model = role === "creators" ? Creator : Fan;
+    const createdUser = await Model.create({
+      email,
+      password: hashedPassword,
+      name,
+      role,
     });
+
+    const { _id } = createdUser;
+    const user = { email, name, _id, role };
+    res.status(201).json({ user: user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
-// routes/auth.routes.js
-// ...
-
-// POST  /auth/login - Verifies email and password and returns a JWT
+// POST /auth/login - Verifies email and password and returns a JWT for Fan or Creator
 router.post("/login", (req, res, next) => {
   const { email, password } = req.body;
 
-  // Check if email or password are provided as empty string
-  if (email === "" || password === "") {
-    res.status(400).json({ message: "Provide email and password." });
+  if (!email || !password) {
+    res.status(401).json({ message: "All inputs are required!" });
     return;
   }
 
-  // Check the users collection if a user with the same email exists
-  User.findOne({ email })
-    .then((foundUser) => {
+  const findUser = (Model) => {
+    return Model.findOne({ email }).then((foundUser) => {
       if (!foundUser) {
-        // If the user is not found, send an error response
-        res.status(401).json({ message: "User not found." });
-        return;
+        return null;
       }
-
-      // Compare the provided password with the one saved in the database
       const passwordCorrect = bcrypt.compareSync(password, foundUser.password);
-
       if (passwordCorrect) {
-        // Deconstruct the user object to omit the password
-        const { _id, email, name } = foundUser;
-
-        // Create an object that will be set as the token payload
-        const payload = { _id, email, name };
-
-        // Create and sign the token
+        const { _id, email, name, role } = foundUser;
+        const payload = { _id, email, name, role };
         const authToken = jwt.sign(payload, process.env.TOKEN_SECRET, {
           algorithm: "HS256",
           expiresIn: "6h",
         });
-
-        // Send the token as the response
-        res.status(200).json({ authToken: authToken });
+        return { authToken };
       } else {
-        res.status(401).json({ message: "Unable to authenticate the user" });
+        return null;
+      }
+    });
+  };
+
+  Promise.all([findUser(Fan), findUser(Creator)])
+    .then((results) => {
+      const result = results.find((res) => res !== null);
+      if (result) {
+        return res.status(200).json(result);
+      } else {
+        return res
+          .status(401)
+          .json({ message: "Unable to authenticate the fan/creator" });
       }
     })
-    .catch((err) => res.status(500).json({ message: "Internal Server Error" }));
+    .catch((err) => {
+      console.error("Login error: ", err);
+      return res.status(500).json({ message: "Internal Server Error" });
+    });
 });
 
-// ...
-
-// GET  /auth/verify  -  Used to verify JWT stored on the client
+// GET /auth/verify - Used to verify JWT stored on the client
 router.get("/verify", isAuthenticated, (req, res, next) => {
-  // If JWT token is valid the payload gets decoded by the
-  // isAuthenticated middleware and made available on `req.payload`
   console.log(`req.payload`, req.payload);
-
-  // Send back the object with user data
-  // previously set as the token payload
   res.status(200).json(req.payload);
 });
 

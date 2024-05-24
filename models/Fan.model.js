@@ -1,7 +1,7 @@
 const { Schema, model } = require("mongoose");
 
-// TODO: Please make sure you edit the User model to whatever makes sense in this case
-const userSchema = new Schema(
+// TODO: Please make sure you edit the Fan model to whatever makes sense in this case
+const fanSchema = new Schema(
   {
     name: {
       type: String,
@@ -26,7 +26,11 @@ const userSchema = new Schema(
       type: [String],
       default: [""],
     },
-    votes: [{ type: Schema.Types.ObjectId, ref: "Vote" }],
+    role: {
+      type: String,
+      enum: ["creators", "fans"],
+    },
+    votes: [{ type: Schema.Types.ObjectId, ref: "Option" }],
     favoritCreators: [{ type: Schema.Types.ObjectId, ref: "Creator" }],
   },
   {
@@ -35,6 +39,6 @@ const userSchema = new Schema(
   }
 );
 
-const User = model("User", userSchema);
+const Fan = model("Fan", fanSchema);
 
-module.exports = User;
+module.exports = Fan;

@@ -1,7 +1,6 @@
 const { Schema, model } = require("mongoose");
 
-// TODO: Please make sure you edit the User model to whatever makes sense in this case
-const VoteSchema = new Schema({
+const OptionsSchema = new Schema({
   title: {
     type: String,
     required: [true, "Title is required."],
@@ -14,13 +13,17 @@ const VoteSchema = new Schema({
     type: String,
     default: "",
   },
-  project: [{ type: Schema.Types.ObjectId, ref: "Project" }],
+  projectId: {
+    type: Schema.Types.ObjectId,
+    ref: "Project",
+    required: [true, "Project ID is required."],
+  },
   counter: {
     type: Number,
     default: 0,
   },
 });
 
-const Vote = model("Vote", VoteSchema);
+const Option = model("Option", OptionsSchema);
 
-module.exports = Vote;
+module.exports = Option;

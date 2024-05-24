@@ -4,7 +4,6 @@ require("dotenv").config();
 
 // ℹ️ Connects to the database
 require("./db");
-const { isAuthenticated } = require("./middleware/jwt.middleware");
 
 // Handles http requests (express is node js framework)
 // https://www.npmjs.com/package/express
@@ -16,20 +15,20 @@ const app = express();
 require("./config")(app);
 
 // 👇 Start handling routes here
-const indexRoutes = require("./routes/index.routes");
-app.use("/api", indexRoutes);
+// const indexRoutes = require("./routes/index.routes");
+// app.use("/api", indexRoutes);
 
 const authRoutes = require("./routes/auth.routes");
 app.use("/auth", authRoutes);
 
 const creatorRoutes = require("./routes/creator.routes");
-app.use("/api", isAuthenticated, creatorRoutes);
+app.use("/api", creatorRoutes);
 
-const userRoutes = require("./routes/user.routes");
-app.use("/api", isAuthenticated, userRoutes);
+const fanRoutes = require("./routes/fan.routes");
+app.use("/api", fanRoutes);
 
-const voteRoutes = require("./routes/vote.routes");
-app.use("/api", voteRoutes);
+const optionRoutes = require("./routes/option.routes");
+app.use("/api", optionRoutes);
 
 const projectRoutes = require("./routes/project.routes");
 app.use("/api", projectRoutes);
