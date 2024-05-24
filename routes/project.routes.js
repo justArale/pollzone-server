@@ -87,6 +87,7 @@ router.get("/creators/:creatorId/projects/:projectId", (req, res) => {
   const { creatorId, projectId } = req.params;
 
   Project.findOne({ _id: projectId, creator: creatorId })
+    .populate("options")
     .then((project) => {
       if (!project) {
         return res.status(404).json({

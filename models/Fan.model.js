@@ -30,7 +30,7 @@ const fanSchema = new Schema(
       type: String,
       enum: ["creators", "fans"],
     },
-    votes: [{ type: Schema.Types.ObjectId, ref: "Options" }],
+    votes: [{ type: Schema.Types.ObjectId, ref: "Option" }],
     favoritCreators: [{ type: Schema.Types.ObjectId, ref: "Creator" }],
   },
   {

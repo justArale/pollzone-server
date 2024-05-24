@@ -2,6 +2,8 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 
 const Fan = require("../models/Fan.model");
+const Option = require("../models/Option.model");
+
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 
 // GET /api/fans - Retrieves all of the creators in the database collection
@@ -36,6 +38,13 @@ router.get("/fans/:id", (req, res) => {
 router.put("/fans/:id", isAuthenticated, (req, res) => {
   const fanId = req.params.id;
 
+  // Check if the authenticated user is the same as the fanId
+  if (req.payload._id !== fanId) {
+    return res
+      .status(403)
+      .json({ error: "You are not authorized to update the creator" });
+  }
+
   if (!mongoose.Types.ObjectId.isValid(fanId)) {
     res.status(400).json({ message: "Specified id is not valid" });
     return;
@@ -52,17 +61,41 @@ router.put("/fans/:id", isAuthenticated, (req, res) => {
     });
 });
 
-// DELETE /api/fans/:id - Deletes a specific fan by id
-router.delete("/fans/:id", isAuthenticated, (req, res) => {
-  Fan.findByIdAndDelete(req.params.id)
-    .then((result) => {
-      console.log("Fan deleted!");
-      res.status(204).send();
-    })
-    .catch((error) => {
-      console.error("Error while deleting the fan ->", error);
-      res.status(500).json({ error: "Deleting fan failed" });
-    });
+// DELETE /fans/:id - Deletes a specific fan by id
+router.delete("/fans/:id", isAuthenticated, async (req, res) => {
+  const fanId = req.params.id;
+
+  // Check if the authenticated user is the same as the fanId
+  if (req.payload._id !== fanId) {
+    return res
+      .status(403)
+      .json({ error: "You are not authorized to delete this fan" });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(fanId)) {
+    return res.status(400).json({ message: "Specified fan id is not valid" });
+  }
+
+  try {
+    // Collect all votes of the fan
+    const fan = await Fan.findById(fanId).populate("votes");
+
+    if (fan && fan.votes.length > 0) {
+      // Update the counter of each option the fan has voted for
+      for (const option of fan.votes) {
+        await Option.findByIdAndUpdate(option._id, { $inc: { counter: -1 } });
+      }
+    }
+
+    // Delete the fan
+    await Fan.findByIdAndDelete(fanId);
+
+    console.log("Fan and associated votes updated!");
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error while deleting the fan and updating votes ->", error);
+    res.status(500).json({ error: "Deleting fan and updating votes failed" });
+  }
 });
 
 module.exports = router;
