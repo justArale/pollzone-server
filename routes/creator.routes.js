@@ -2,13 +2,14 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 
 const Creator = require("../models/Creator.model");
+const Fan = require("../models/Fan.model");
 const Project = require("../models/Project.model");
 const Option = require("../models/Option.model");
 
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const { isCreator } = require("../middleware/creator.middleware");
 
-// GET /api/creators - Retrieves all of the creators in the database collection
+// GET /creators - Retrieves all of the creators in the database collection
 router.get("/creators", (req, res) => {
   Creator.find({})
     .then((creators) => {
@@ -21,7 +22,7 @@ router.get("/creators", (req, res) => {
     });
 });
 
-// GET /api/creators/:id - Retrieves a specific creator by id
+// GET /creators/:id - Retrieves a specific creator by id
 router.get("/creators/:id", (req, res) => {
   const creatorId = req.params.id;
 
@@ -30,6 +31,7 @@ router.get("/creators/:id", (req, res) => {
     return;
   }
   Creator.findById(creatorId)
+    .populate("projects")
     .then((creator) => {
       console.log("Retrieved creator ->", creator);
       res.status(200).json(creator);
@@ -40,7 +42,7 @@ router.get("/creators/:id", (req, res) => {
     });
 });
 
-// PUT /api/creators/:id - Updates a specific creator by id
+// PUT /creators/:id - Updates a specific creator by id
 router.put("/creators/:id", isAuthenticated, isCreator, (req, res) => {
   const creatorId = req.params.id;
 
@@ -67,7 +69,80 @@ router.put("/creators/:id", isAuthenticated, isCreator, (req, res) => {
     });
 });
 
-// DELETE /api/creators/:id - Deletes a specific creator by id
+// PUT /creators/:creatorId/fans/:fanId/toggleFollow - Fan follows or unfollows a creator
+router.put(
+  "/creators/:creatorId/fans/:fanId/toggleFollow",
+  isAuthenticated,
+  async (req, res) => {
+    const { fanId, creatorId } = req.params;
+
+    // Check if the IDs are valid
+    if (
+      !mongoose.Types.ObjectId.isValid(fanId) ||
+      !mongoose.Types.ObjectId.isValid(creatorId)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Specified fan or creator id is not valid" });
+    }
+
+    try {
+      // Check if the fan and creator exist
+      const fan = await Fan.findById(fanId);
+      const creator = await Creator.findById(creatorId);
+
+      if (!fan) {
+        return res.status(404).json({ message: "Fan not found" });
+      }
+
+      if (!creator) {
+        return res.status(404).json({ message: "Creator not found" });
+      }
+
+      // Determine whether to follow or unfollow
+      const isFollowing = fan.favoritCreators.includes(creatorId);
+
+      if (isFollowing) {
+        // Unfollow: Remove the creator from the fan's favoritCreators array
+        // and remove the fan from the creator's fans array
+        await Fan.findByIdAndUpdate(
+          fanId,
+          { $pull: { favoritCreators: creatorId } },
+          { new: true }
+        );
+
+        await Creator.findByIdAndUpdate(
+          creatorId,
+          { $pull: { fans: fanId } },
+          { new: true }
+        );
+
+        res.status(200).json({ message: "Unfollowed the creator" });
+      } else {
+        // Follow: Add the creator to the fan's favoritCreators array
+        // and add the fan to the creator's fans array
+        const updatedFan = await Fan.findByIdAndUpdate(
+          fanId,
+          { $addToSet: { favoritCreators: creatorId } }, // $addToSet ensures no duplicates
+          { new: true }
+        );
+
+        const updatedCreator = await Creator.findByIdAndUpdate(
+          creatorId,
+          { $addToSet: { fans: fanId } }, // $addToSet ensures no duplicates
+          { new: true }
+        );
+
+        res.status(200).json({ fan: updatedFan, creator: updatedCreator });
+      }
+    } catch (error) {
+      console.error("Error while toggling follow status ->", error);
+      res.status(500).json({ error: "Failed to toggle follow status" });
+    }
+  }
+);
+
+// DELETE /creators/:id - Deletes a specific creator by id
 router.delete("/creators/:id", isAuthenticated, async (req, res) => {
   const creatorId = req.params.id;
 
@@ -98,6 +173,12 @@ router.delete("/creators/:id", isAuthenticated, async (req, res) => {
       // Delete all projects of the creator
       await Project.deleteMany({ creator: creatorId });
     }
+
+    // Remove the creator from the favoritCreators array of all fans
+    await Fan.updateMany(
+      { favoritCreators: creatorId },
+      { $pull: { favoritCreators: creatorId } }
+    );
 
     // Delete the creator
     await Creator.findByIdAndDelete(creatorId);

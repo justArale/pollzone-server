@@ -90,6 +90,7 @@ router.get("/creators/:creatorId/projects/:projectId", (req, res) => {
 
   Project.findOne({ _id: projectId, creator: creatorId })
     .populate("options")
+    .populate("creator")
     .then((project) => {
       if (!project) {
         return res.status(404).json({
@@ -156,7 +157,7 @@ router.put(
   }
 );
 
-// DELETE /api/creators/:creatorId/projects/:projectId
+// DELETE /creators/:creatorId/projects/:projectId
 router.delete(
   "/creators/:creatorId/projects/:projectId",
   isAuthenticated,
