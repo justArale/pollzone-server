@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 
 const Project = require("../models/Project.model");
 const Creator = require("../models/Creator.model");
+const Option = require("../models/Option.model");
+
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const { isCreator } = require("../middleware/creator.middleware");
 
@@ -187,6 +189,9 @@ router.delete(
           .json({ message: "Project not found or unauthorized" });
       }
 
+      // Delete all options associated with the project
+      await Option.deleteMany({ projectId: projectId });
+
       // Delete project
       await Project.findByIdAndDelete(projectId);
 
@@ -195,11 +200,17 @@ router.delete(
         $pull: { projects: projectId },
       });
 
-      console.log("Project deleted!");
+      console.log("Project and associated options deleted!");
       res.status(204).send();
     } catch (error) {
-      console.error("Error while deleting the project ->", error);
-      res.status(500).json({ error: "Deleting project failed" });
+      console.error(
+        "Error while deleting the project and associated options ->",
+        error
+      );
+      res
+        .status(500)
+        .json({ error: "Deleting project and associated options failed" });
+      console.log(error);
     }
   }
 );
