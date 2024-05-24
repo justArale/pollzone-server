@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 
 const Option = require("../models/Option.model");
 const Project = require("../models/Project.model");
+const Fan = require("../models/Fan.model");
+
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const { isFan } = require("../middleware/fan.middleware");
 const { isCreator } = require("../middleware/creator.middleware");
@@ -81,7 +83,7 @@ router.get(
   }
 );
 
-// PUT /creators/:creatorId/projects/:projectId/options/:optionsId  - Updates a specific option by id (for fans and creators)
+// PUT /creators/:creatorId/projects/:projectId/options/:optionsId - Updates a specific option by id (for fans and creators)
 router.put(
   "/creators/:creatorId/projects/:projectId/options/:optionsId",
   isAuthenticated,
@@ -91,10 +93,14 @@ router.put(
     // Check if the user is a fan or creator
     if (req.payload.role === "fans") {
       // If the user is a fan, call the update function for fans
-      updateOptionForFan(req, res, optionsId);
+      await updateOptionForFan(req, res, optionsId);
+      // Add the option ID to the fan's votes
+      await Fan.findByIdAndUpdate(req.payload._id, {
+        $addToSet: { votes: optionsId },
+      });
     } else if (req.payload.role === "creators") {
       // If the user is a creator, call the update function for creators
-      updateOptionForCreator(req, res, creatorId, projectId, optionsId);
+      await updateOptionForCreator(req, res, creatorId, projectId, optionsId);
     } else {
       res.status(403).json({ message: "Unauthorized user role" });
     }
@@ -146,7 +152,7 @@ async function updateOptionForCreator(
   }
 
   // Update the option
-  updateOptionForFan(req, res, optionsId);
+  await updateOptionForFan(req, res, optionsId);
 }
 
 // DELETE /api/creators/:creatorId/projects/:projectId/options/:optionsId - Deletes a specific project by id
