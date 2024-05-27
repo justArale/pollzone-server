@@ -97,10 +97,6 @@ router.put(
     if (req.payload.role === "fans") {
       // If the user is a fan, call the update function for fans
       await updateOptionForFan(req, res, optionsId);
-      // Add the option ID to the fan's votes
-      await Fan.findByIdAndUpdate(req.payload._id, {
-        $addToSet: { votes: optionsId },
-      });
     } else if (req.payload.role === "creators") {
       // If the user is a creator, call the update function for creators
       await updateOptionForCreator(req, res, creatorId, projectId, optionsId);
@@ -110,21 +106,49 @@ router.put(
   }
 );
 
-// Function to update option for fans
+// Function to update the counter of an option for fans
 async function updateOptionForFan(req, res, optionsId) {
   try {
-    const updatedOption = await Option.findByIdAndUpdate(optionsId, req.body, {
+    const fanId = req.payload._id;
+    const fan = await Fan.findById(fanId);
+
+    if (!fan) {
+      return res.status(404).json({ message: "Fan not found" });
+    }
+
+    // Check if the fan has already voted for this option
+    const hasVoted = fan.votes.includes(optionsId);
+
+    let update;
+    if (hasVoted) {
+      // Decrease the counter and remove the option ID from the fan's votes
+      update = {
+        $inc: { counter: -1 },
+        $pull: { votes: optionsId },
+      };
+    } else {
+      // Increase the counter and add the option ID to the fan's votes
+      update = {
+        $inc: { counter: 1 },
+        $addToSet: { votes: optionsId },
+      };
+    }
+
+    const updatedOption = await Option.findByIdAndUpdate(optionsId, update, {
       new: true,
     });
+
     if (!updatedOption) {
       return res.status(404).json({ message: "Option not found" });
     }
 
+    await Fan.findByIdAndUpdate(fanId, update);
+
     console.log("Updated option ->", updatedOption);
     res.status(200).json(updatedOption);
   } catch (error) {
-    console.error("Error while updating the option ->", error);
-    res.status(500).json({ error: "Failed to update the option" });
+    console.error("Error while updating the option counter ->", error);
+    res.status(500).json({ error: "Failed to update the option counter" });
   }
 }
 
@@ -136,26 +160,45 @@ async function updateOptionForCreator(
   projectId,
   optionsId
 ) {
-  // Check if the logged-in creator is the owner of the project
-  if (req.payload._id !== creatorId) {
-    return res
-      .status(403)
-      .json({ message: "You are not authorized to perform this action" });
-  }
+  try {
+    // Check if the logged-in creator is the owner of the project
+    if (req.payload._id !== creatorId) {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to perform this action" });
+    }
 
-  // Check if the option belongs to a project of the logged-in creator
-  const project = await Project.findOne({
-    _id: projectId,
-    creator: creatorId,
-  });
-  if (!project) {
-    return res
-      .status(404)
-      .json({ message: "Project not found or unauthorized" });
-  }
+    // Check if the option belongs to a project of the logged-in creator
+    const project = await Project.findOne({
+      _id: projectId,
+      creator: creatorId,
+    });
+    if (!project) {
+      return res
+        .status(404)
+        .json({ message: "Project not found or unauthorized" });
+    }
 
-  // Update the option
-  await updateOptionForFan(req, res, optionsId);
+    // Update the option without changing the counter
+    const updateData = { ...req.body };
+    delete updateData.counter; // Ensure the counter is not modified by the creator
+
+    const updatedOption = await Option.findByIdAndUpdate(
+      optionsId,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedOption) {
+      return res.status(404).json({ message: "Option not found" });
+    }
+
+    console.log("Updated option (creator) ->", updatedOption);
+    res.status(200).json(updatedOption);
+  } catch (error) {
+    console.error("Error while updating the option ->", error);
+    res.status(500).json({ error: "Failed to update the option" });
+  }
 }
 
 // DELETE /api/creators/:creatorId/projects/:projectId/options/:optionsId - Deletes a specific project by id
