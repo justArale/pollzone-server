@@ -10,10 +10,7 @@ const ProjectSchema = new Schema(
       type: String,
       required: [true, "Description is required."],
     },
-    image: {
-      type: String,
-      default: "",
-    },
+    image: String,
     options: [{ type: Schema.Types.ObjectId, ref: "Option" }],
     creator: {
       type: Schema.Types.ObjectId,
