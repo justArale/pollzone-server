@@ -101,6 +101,7 @@ router.get("/creators/:creatorId/projects", (req, res) => {
   const creatorId = req.params.creatorId;
 
   Project.find({ creator: creatorId })
+    .populate("options")
     .then((projects) => {
       console.log(`Retrieved projects for creator ${creatorId} ->`, projects);
       res.json(projects);
