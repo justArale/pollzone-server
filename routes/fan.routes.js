@@ -26,7 +26,15 @@ router.get("/fans/:id", (req, res) => {
 
   Fan.findById(fanId)
     .populate("favoritCreators")
-    .populate("votes")
+    .populate({
+      path: 'votes',
+      populate: {
+        path: 'projectId',
+        populate: {
+          path: 'creator'
+        }
+      }
+    })
     .then((fan) => {
       console.log("Retrieved fan ->", fan);
       res.status(200).json(fan);
