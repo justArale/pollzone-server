@@ -86,6 +86,7 @@ router.post(
 // GET /projects - Retrieves all projects of all creator
 router.get("/projects", (req, res) => {
   Project.find({})
+    .populate("creator")
     .then((projects) => {
       console.log(`Retrieved projects for creator ->`, projects);
       res.json(projects);
