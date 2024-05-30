@@ -10,9 +10,15 @@ const saltRounds = 10;
 
 // POST /auth/signup - Creates a new fan or creator in the database
 router.post("/signup", async (req, res, next) => {
-  const { email, password, name, role } = req.body;
+  const { email, password, name, role, category } = req.body;
 
-  if (email === "" || password === "" || name === "" || !role) {
+  if (
+    email === "" ||
+    password === "" ||
+    name === "" ||
+    !role ||
+    (role === "creators" && !category)
+  ) {
     res
       .status(400)
       .json({ message: "Provide email, password, name, and role" });
@@ -53,10 +59,11 @@ router.post("/signup", async (req, res, next) => {
       password: hashedPassword,
       name,
       role,
+      category,
     });
 
     const { _id } = createdUser;
-    const user = { email, name, _id, role };
+    const user = { email, name, _id, role, category };
     res.status(201).json({ user: user });
   } catch (err) {
     console.error(err);

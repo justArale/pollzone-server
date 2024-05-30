@@ -21,10 +21,9 @@ const ProjectSchema = new Schema(
       required: [true, "Project ID is required."],
     },
     inProgress: { type: Boolean, default: true },
-    timeCount: {
-      type: Number,
-      enum: [1, 2, 3, 5, 7, 14, 21, 28],
-    },
+
+    timeCount: { type: Number, required: true }, // in days
+    startDate: { type: Date, default: Date.now }, // default to now
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`

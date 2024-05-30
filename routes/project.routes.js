@@ -25,28 +25,55 @@ router.post(
     }
 
     try {
-      const { title, description, image, options, inProgress, timeCount } =
-        req.body;
+      const {
+        title,
+        description,
+        image,
+        options,
+        inProgress,
+        timeCount,
+        startDate,
+      } = req.body;
 
-      // Create project
+      // Calculate the end date based on the start date and timeCount in days
+      const now = new Date();
+      const start = startDate ? new Date(startDate) : now;
+      const endDate = new Date(start);
+      endDate.setDate(endDate.getDate() + timeCount);
+
+      // Determine if the project should start immediately or not
+      const projectInProgress = inProgress || endDate <= now;
+
+      // Erstelle das Projekt
       const newProject = await Project.create({
         title,
         description,
         image,
         options,
         creator: creatorId,
-        inProgress,
+        inProgress: projectInProgress,
         timeCount,
+        startDate: start,
       });
 
       console.log("Created new project ->", newProject);
 
-      // Update the creator to add the new project to their projects array
+      // Füge das neue Projekt zum Array der Projekte des Erstellers hinzu
       await Creator.findByIdAndUpdate(
         creatorId,
         { $push: { projects: newProject._id } },
         { new: true }
       );
+
+      // Start the timer to set inProgress to true when time expires
+      if (!projectInProgress) {
+        setTimeout(async () => {
+          // Set inProgress to true
+          newProject.inProgress = true;
+          await newProject.save();
+          console.log("Project timer expired, setting inProgress to true");
+        }, timeCount * 24 * 60 * 60 * 1000); // Convert days to milliseconds
+      }
 
       res.status(201).json(newProject);
     } catch (error) {
@@ -59,6 +86,7 @@ router.post(
 // GET /projects - Retrieves all projects of all creator
 router.get("/projects", (req, res) => {
   Project.find({})
+    .populate("creator")
     .then((projects) => {
       console.log(`Retrieved projects for creator ->`, projects);
       res.json(projects);
@@ -74,6 +102,7 @@ router.get("/creators/:creatorId/projects", (req, res) => {
   const creatorId = req.params.creatorId;
 
   Project.find({ creator: creatorId })
+    .populate("options")
     .then((projects) => {
       console.log(`Retrieved projects for creator ${creatorId} ->`, projects);
       res.json(projects);
@@ -90,12 +119,14 @@ router.get("/creators/:creatorId/projects/:projectId", (req, res) => {
 
   Project.findOne({ _id: projectId, creator: creatorId })
     .populate("options")
+    .populate("creator")
     .then((project) => {
       if (!project) {
         return res.status(404).json({
           message: "Project not found or does not belong to this creator",
         });
       }
+
       console.log(
         `Retrieved project ${projectId} for creator ${creatorId} ->`,
         project
@@ -147,6 +178,17 @@ router.put(
         req.body,
         { new: true }
       );
+
+      // Check, if inProgress is changed from true to false
+      if (!updatedProject.inProgress && project.inProgress) {
+        setTimeout(async () => {
+          // Set inProgress to true after the timer expires
+          updatedProject.inProgress = true;
+          await updatedProject.save();
+          console.log("Project timer expired, setting inProgress to false");
+        }, updatedProject.timeCount * 24 * 60 * 60 * 1000); // Convert days to milliseconds
+      }
+
       console.log("Updated project ->", updatedProject);
       res.status(200).json(updatedProject);
     } catch (error) {
@@ -156,7 +198,7 @@ router.put(
   }
 );
 
-// DELETE /api/creators/:creatorId/projects/:projectId
+// DELETE /creators/:creatorId/projects/:projectId
 router.delete(
   "/creators/:creatorId/projects/:projectId",
   isAuthenticated,
