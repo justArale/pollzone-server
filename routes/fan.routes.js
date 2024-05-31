@@ -2,11 +2,12 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 
 const Fan = require("../models/Fan.model");
+const Creator = require("../models/Creator.model");
 const Option = require("../models/Option.model");
 
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 
-// GET /api/fans - Retrieves all of the creators in the database collection
+// GET /fans - Retrieves all of the creators in the database collection
 router.get("/fans", (req, res) => {
   Fan.find({})
     .then((fans) => {
@@ -19,11 +20,21 @@ router.get("/fans", (req, res) => {
     });
 });
 
-// GET /api/fans/:id - Retrieves a specific fan by id. The route should be protected by the authentication middleware.
+// GET /fans/:id - Retrieves a specific fan by id. The route should be protected by the authentication middleware.
 router.get("/fans/:id", (req, res) => {
   const fanId = req.params.id;
 
   Fan.findById(fanId)
+    .populate("favoritCreators")
+    .populate({
+      path: 'votes',
+      populate: {
+        path: 'projectId',
+        populate: {
+          path: 'creator'
+        }
+      }
+    })
     .then((fan) => {
       console.log("Retrieved fan ->", fan);
       res.status(200).json(fan);
@@ -34,7 +45,7 @@ router.get("/fans/:id", (req, res) => {
     });
 });
 
-// PUT /api/fans/:id - Updates a specific fan by id
+// PUT /fans/:id - Updates a specific fan by id
 router.put("/fans/:id", isAuthenticated, (req, res) => {
   const fanId = req.params.id;
 
@@ -86,6 +97,9 @@ router.delete("/fans/:id", isAuthenticated, async (req, res) => {
         await Option.findByIdAndUpdate(option._id, { $inc: { counter: -1 } });
       }
     }
+
+    // Remove the fan from the fans-array of all creators
+    await Creator.updateMany({ fans: fanId }, { $pull: { fans: fanId } });
 
     // Delete the fan
     await Fan.findByIdAndDelete(fanId);
