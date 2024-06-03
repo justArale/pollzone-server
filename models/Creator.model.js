@@ -18,10 +18,8 @@ const CreatorSchema = new Schema(
       required: [true, "Password is required."],
     },
     description: String,
-    image: {
-      type: String,
-      default: "",
-    },
+    image: String,
+
     socialMedia: {
       type: [String],
       default: [""],
