@@ -13,7 +13,7 @@ const polloptionsStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     allowed_formats: ["jpg", "png", "webm", "jpeg"],
-    folder: "pollzone-options", // The name of the folder in cloudinary for poll options
+    folder: "pollzone/option-image", // The name of the folder in cloudinary for poll options
     //resource_type: "raw", // This is in case you want to upload other types of files, not just images
   },
 });
@@ -22,7 +22,7 @@ const avatarStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     allowed_formats: ["jpg", "png", "webm", "jpeg"],
-    folder: "pollzone-avatar", // The name of the folder in cloudinary for avatars
+    folder: "pollzone/avatar", // The name of the folder in cloudinary for avatars
     // resource_type: "raw", // This is in case you want to upload other types of files, not just images
   },
 });

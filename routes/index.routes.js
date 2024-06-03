@@ -8,7 +8,7 @@ router.get("/", (req, res, next) => {
 // Route for uploading poll option images
 router.post(
   "/api/upload-option-image",
-  polloptionsUploader.single("image"),
+  polloptionsUploader.single("file"),
   (req, res, next) => {
     console.log("file is: ", req.file);
 
@@ -24,7 +24,7 @@ router.post(
 // Route for uploading avatar images
 router.post(
   "/api/upload-avatar",
-  avatarUploader.single("image"),
+  avatarUploader.single("file"),
   (req, res, next) => {
     console.log("file is: ", req.file);
 
