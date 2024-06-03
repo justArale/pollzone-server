@@ -5,6 +5,8 @@ const Creator = require("../models/Creator.model");
 const Fan = require("../models/Fan.model");
 const Project = require("../models/Project.model");
 const Option = require("../models/Option.model");
+const bcrypt = require("bcryptjs");
+const saltRounds = 10;
 
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 const { isCreator } = require("../middleware/creator.middleware");
@@ -68,6 +70,53 @@ router.put("/creators/:id", isAuthenticated, isCreator, (req, res) => {
       res.status(500).json({ error: "Failed to update the creator" });
     });
 });
+
+// PUT /creators/:id/change-password - Updates a specific creators password by id
+
+router.put(
+  "/creators/:creatorId/change-password",
+  isAuthenticated,
+  async (req, res) => {
+    const { creatorId } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
+    try {
+      // Find the creator by ID
+      const creator = await Creator.findById(creatorId);
+      console.log("Creator found:", creator);
+
+      // Check if the creator exists
+      if (!creator) {
+        return res.status(404).json({ message: "Creator not found" });
+      }
+
+      // Check if the old password matches the current password
+      const passwordCorrect = bcrypt.compareSync(oldPassword, creator.password);
+      console.log("Password correct:", passwordCorrect);
+
+      if (!passwordCorrect) {
+        return res.status(401).json({ message: "Old password is incorrect" });
+      }
+
+      // Encrypt the new password
+      const salt = bcrypt.genSaltSync(saltRounds);
+      const hashedNewPassword = bcrypt.hashSync(newPassword, salt);
+      console.log("New hashed password:", hashedNewPassword);
+
+      // Set the new password
+      creator.password = hashedNewPassword;
+
+      // Save the creator
+      await creator.save();
+      console.log("Creator saved successfully");
+
+      res.status(200).json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error while updating password ->", error);
+      res.status(500).json({ error: "Failed to update password" });
+    }
+  }
+);
 
 // PUT /creators/:creatorId/fans/:fanId/toggleFollow - Fan follows or unfollows a creator
 router.put(

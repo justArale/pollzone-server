@@ -18,10 +18,8 @@ const fanSchema = new Schema(
       type: String,
       required: [true, "Password is required."],
     },
-    image: {
-      type: String,
-      default: "",
-    },
+    image: String,
+
     socialMedia: {
       type: [String],
       default: [""],
