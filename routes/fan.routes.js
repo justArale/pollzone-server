@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const Fan = require("../models/Fan.model");
 const Creator = require("../models/Creator.model");
 const Option = require("../models/Option.model");
+const bcrypt = require("bcryptjs");
+const saltRounds = 10;
 
 const { isAuthenticated } = require("../middleware/jwt.middleware");
 
@@ -27,13 +29,13 @@ router.get("/fans/:id", (req, res) => {
   Fan.findById(fanId)
     .populate("favoritCreators")
     .populate({
-      path: 'votes',
+      path: "votes",
       populate: {
-        path: 'projectId',
+        path: "projectId",
         populate: {
-          path: 'creator'
-        }
-      }
+          path: "creator",
+        },
+      },
     })
     .then((fan) => {
       console.log("Retrieved fan ->", fan);
@@ -71,6 +73,52 @@ router.put("/fans/:id", isAuthenticated, (req, res) => {
       res.status(500).json({ error: "Failed to update the fan" });
     });
 });
+
+// PUT /fans/:id/change-password - Updates a specific fans password by id
+router.put(
+  "/fans/:fanId/change-password",
+  isAuthenticated,
+  async (req, res) => {
+    const { fanId } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
+    try {
+      // Find the fan by ID
+      const fan = await Fan.findById(fanId);
+      console.log("Fan found:", fan);
+
+      // Check if the creator exists
+      if (!fan) {
+        return res.status(404).json({ message: "Fan not found" });
+      }
+
+      // Check if the old password matches the current password
+      const passwordCorrect = bcrypt.compareSync(oldPassword, fan.password);
+      console.log("Password correct:", passwordCorrect);
+
+      if (!passwordCorrect) {
+        return res.status(401).json({ message: "Old password is incorrect" });
+      }
+
+      // Encrypt the new password
+      const salt = bcrypt.genSaltSync(saltRounds);
+      const hashedNewPassword = bcrypt.hashSync(newPassword, salt);
+      console.log("New hashed password:", hashedNewPassword);
+
+      // Set the new password
+      fan.password = hashedNewPassword;
+
+      // Save the fan
+      await fan.save();
+      console.log("Fan saved successfully");
+
+      res.status(200).json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error while updating password ->", error);
+      res.status(500).json({ error: "Failed to update password" });
+    }
+  }
+);
 
 // DELETE /fans/:id - Deletes a specific fan by id
 router.delete("/fans/:id", isAuthenticated, async (req, res) => {

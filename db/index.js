@@ -8,13 +8,10 @@ const mongoose = require("mongoose");
 const MONGO_URI =
   process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/pollzone";
 
-  mongoose
+mongoose
   .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then((x) => {
-    console.log(x, "x");
-    console.log(MONGO_URI, "uri");
     const dbName = x.connections[0].name;
-    console.log(dbName);
     console.log(`Connected to Mongo! Database name: "${dbName}"`);
   })
   .catch((err) => {
